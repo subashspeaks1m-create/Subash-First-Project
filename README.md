@@ -59,9 +59,11 @@ Open the panel with `C` or the slider icon. Every group updates live:
 
 ### Notes
 
-- The headline loads Montserrat from Google Fonts because it is the closest free match to the
-  source. Offline, it falls back through Poppins → Inter → the system sans; the layout is
-  unaffected, only the letterforms change.
+- The file has **no network dependency**. Montserrat (latin, variable weight) is embedded as a
+  data URI, so the type renders identically offline — just double-click the file.
+- The number card is drawn as vector art rather than a font glyph, because the source numeral is
+  custom lettering (a long raked flag on a broad flat-footed stem) that no font reproduces.
+  Switch it to **Text label** in the panel to use any word or number instead.
 - The composition is authored in a fixed 1920×968 space and always fits the window, so the
   framing is identical at any size or aspect ratio.
 - Rendering cost is dominated by the bloom and grain passes. If the frame rate drops, the page

@@ -254,14 +254,17 @@ const R_MARK_ART=0.734,  R_MARK_TEXT=1.040;   // vector art vs. a font glyph
 const S_CRYSTAL=0.80, S_MARK_TEXT=0.86, S_MARK_ART=0.70, S_GLOW=0.55;
 
 /* ─────────────────────────────  DEFAULTS  ───────────────────────────── */
-const PURPLE_TOP="#ff3fe4", PURPLE_BOT="#3a1a8e";
 const DEFAULTS = {
+  /* One gem per card. Every pair keeps the same value structure — a bright
+     saturated tip over a deep base — so only the hue changes and the five
+     still read as one family instead of a rainbow. The white frame and
+     numerals stay neutral, leaving the crystals to carry all the colour. */
   items: [
-    { title:"Measure your Baseline", mark:"1", top:PURPLE_TOP, bottom:PURPLE_BOT },
-    { title:"Eliminate the Leakage", mark:"2", top:PURPLE_TOP, bottom:PURPLE_BOT },
-    { title:"Kill Procrastination",  mark:"3", top:PURPLE_TOP, bottom:PURPLE_BOT },
-    { title:"A Magical Tool",        mark:"4", top:PURPLE_TOP, bottom:PURPLE_BOT },
-    { title:"Purpose",               mark:"5", top:PURPLE_TOP, bottom:PURPLE_BOT }
+    { title:"Measure your Baseline", mark:"1", top:"#3fe4ff", bottom:"#0d2c73", edge:"#b6f6ff" }, // ice — instruments, cold data
+    { title:"Eliminate the Leakage", mark:"2", top:"#3ff09a", bottom:"#0a4436", edge:"#b9ffe0" }, // emerald — recovery, efficiency
+    { title:"Kill Procrastination",  mark:"3", top:"#ff4d5e", bottom:"#6a0f2b", edge:"#ffc2c8" }, // crimson — urgency
+    { title:"A Magical Tool",        mark:"4", top:"#ff3fe4", bottom:"#3a1a8e", edge:"#ffc0ff" }, // the source violet — magic
+    { title:"Purpose",               mark:"5", top:"#ffcf49", bottom:"#6b3d0c", edge:"#ffe9b0" }  // gold — the summit
   ],
   text: {
     font: "'Montserrat',system-ui,sans-serif",
@@ -270,7 +273,7 @@ const DEFAULTS = {
     x: 943,
     start: 2.66, charDur: 0.40, stagger: 0.038, slide: 26
   },
-  badge: { show:true, mode:"text", color:"#e9e9ef", opacity:0.42, weight:800, scale:1 },
+  badge: { show:true, mode:"text", color:"#f2f2f7", opacity:0.5, weight:800, scale:1 },
   ca: { top:"#0d2f74", bottom:"#2fe6ff", edge:"#b6f6ff", sides:9, bands:3, rough:0.19, radius:0.30, tip:0.32, glow:0.85, spin:0.55, seed:7 },
   cb: { edge:"#ffc0ff", sides:7, bands:2, rough:0.07, radius:0.26, tip:0.46, glow:0.95, spin:0.34, seed:21,
         scale:1, pop:1.92 },
@@ -883,7 +886,7 @@ function paintCrystals(t,alpha,s,drift){
       rx:0.10+Math.sin(t*0.42+i)*0.07,
       ry:-0.45+(t-T.pop)*C.spin,
       rz:Math.sin(t*0.33+i)*0.045,
-      top:it.top, bottom:it.bottom, edge:C.edge,
+      top:it.top, bottom:it.bottom, edge:it.edge||C.edge,
       alpha:alpha*clamp(pp*1.6,0,1), glow:C.glow
     });
   }
@@ -1121,8 +1124,7 @@ const SCHEMA=[
    {k:"badge.scale",l:"Size",t:"rng",min:.2,max:2.2,step:.02},
    {k:"badge.weight",l:"Weight",t:"rng",min:300,max:900,step:100}
  ]},
- {title:"Card crystals",hint:"Shape and finish are shared; each card’s two colours are in its own section above.",items:[
-   {k:"cb.edge",l:"Edge glow",t:"col"},
+ {title:"Card crystals",hint:"Shape and finish are shared by all five; each card’s three colours live in its own section above.",items:[
    {k:"cb.scale",l:"Size",t:"rng",min:.2,max:2.2,step:.02},
    {k:"cb.sides",l:"Facets",t:"rng",min:4,max:16,step:1,mesh:"b"},
    {k:"cb.bands",l:"Bands",t:"rng",min:1,max:5,step:1,mesh:"b"},
@@ -1214,8 +1216,9 @@ function buildUI(){
     items:[
       {k:`items.${i}.title`,l:"Title",t:"area",text:true},
       {k:`items.${i}.mark`, l:"Number",t:"txt"},
-      {k:`items.${i}.top`,  l:"Tip colour",t:"col"},
-      {k:`items.${i}.bottom`,l:"Base colour",t:"col"}
+      {k:`items.${i}.top`,   l:"Tip colour",t:"col"},
+      {k:`items.${i}.bottom`,l:"Base colour",t:"col"},
+      {k:`items.${i}.edge`,  l:"Edge glow",t:"col"}
     ]
   }));
   for(const sec of cardSecs.concat(SCHEMA)){

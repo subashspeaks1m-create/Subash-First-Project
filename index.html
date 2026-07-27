@@ -26,12 +26,12 @@
     will-change:transform;
     contain:layout style;
   }
-  #headline{
+  .hl{
     position:absolute;white-space:nowrap;
     transform:translateY(-50%);
     will-change:contents;
   }
-  #headline span{display:inline-block;white-space:pre;will-change:filter,opacity,transform}
+  .hl span{display:inline-block;white-space:pre;will-change:filter,opacity,transform}
   .fxdefs{position:absolute;width:0;height:0;overflow:hidden}
 
   .bar{position:fixed;left:0;right:0;background:#000;pointer-events:none;z-index:3;transition:height .25s ease}
@@ -240,29 +240,69 @@
    maps world → screen; the background is drawn in raw screen pixels so
    it always bleeds to the edges no matter the window aspect.          */
 const DW = 1920, DH = 968;
-const SCENE_END = 5.60, HOLD = 1.60, DUR = SCENE_END + HOLD;
+const ACT1 = 5.20;            // the camera has settled on card 1 by here
+
+/* Where things sit inside a card, as fractions of the card rect. Keeping these
+   as ratios (rather than absolute coordinates) is what lets a card animate
+   from the full-frame hero layout to the small recap row without any rework. */
+const R_CRYSTAL_X=0.537, R_CRYSTAL_Y=0.505, R_CRYSTAL_S=0.674;
+const R_MARK_X=0.452,    R_MARK_Y=0.500;
+const R_MARK_ART=0.734,  R_MARK_TEXT=1.040;   // vector art vs. a font glyph
+/* In the recap the cards are small and sit close together, so the numeral is
+   pulled back and the crystal pushed up — otherwise the numbers swamp the
+   crystals and five glowing borders bloom into one another. */
+const S_CRYSTAL=0.80, S_MARK_TEXT=0.86, S_MARK_ART=0.70, S_GLOW=0.55;
 
 /* ─────────────────────────────  DEFAULTS  ───────────────────────────── */
+const PURPLE_TOP="#ff3fe4", PURPLE_BOT="#3a1a8e";
 const DEFAULTS = {
+  items: [
+    { title:"Measure your Baseline", mark:"1", top:PURPLE_TOP, bottom:PURPLE_BOT },
+    { title:"Eliminate the Leakage", mark:"2", top:PURPLE_TOP, bottom:PURPLE_BOT },
+    { title:"Kill Procrastination",  mark:"3", top:PURPLE_TOP, bottom:PURPLE_BOT },
+    { title:"A Magical Tool",        mark:"4", top:PURPLE_TOP, bottom:PURPLE_BOT },
+    { title:"Purpose",               mark:"5", top:PURPLE_TOP, bottom:PURPLE_BOT }
+  ],
   text: {
-    body: "Real growth happens in *isolation*",
     font: "'Montserrat',system-ui,sans-serif",
     size: 40, weight: 600, tracking: -0.2, color: "#ffffff", glow: 0.55,
     emWeight: 800, emItalic: true, emColor: "#ffffff",
-    x: 943, y: 397,
+    x: 943,
     start: 2.66, charDur: 0.40, stagger: 0.038, slide: 26
   },
-  badge: { show:true, mode:"mark", body:"1", color:"#e9e9ef", opacity:0.42, size:405, weight:800, x:611, y:397 },
+  badge: { show:true, mode:"text", color:"#e9e9ef", opacity:0.42, weight:800, scale:1 },
   ca: { top:"#0d2f74", bottom:"#2fe6ff", edge:"#b6f6ff", sides:9, bands:3, rough:0.19, radius:0.30, tip:0.32, glow:0.85, spin:0.55, seed:7 },
-  cb: { top:"#ff3fe4", bottom:"#3a1a8e", edge:"#ffc0ff", sides:7, bands:2, rough:0.07, radius:0.26, tip:0.46, glow:0.95, spin:0.34, seed:21,
-        x:658, y:400, size:372, pop:1.92 },
-  frame: { show:true, color:"#ffffff", width:5, glow:0.9, boxW:557, boxH:552, gap:23, x:359, y:121, dots:true, dotR:8 },
+  cb: { edge:"#ffc0ff", sides:7, bands:2, rough:0.07, radius:0.26, tip:0.46, glow:0.95, spin:0.34, seed:21,
+        scale:1, pop:1.92 },
+  frame: { show:true, color:"#ffffff", width:5, glow:0.9, boxW:557, boxH:552, gap:23, x:359, y:121, dots:true, dotR:8, dim:0.42 },
   path:  { show:true, color:"#ffffff", width:4.5, glow:0.9, start:1.18, end:2.02 },
+  /* the closing recap: every card gathered into one readable list */
+  summary: { show:true, x:592, y:52, box:148, pitch:176, gap:54, textSize:46, travel:2.20, hold:2.60 },
   bg: { base:"#0b0b0d", glow:"#8e8e93", brightness:1, vignette:0.75, particles:90, pSize:1,
         pSpeed:1, pColor:"#e7dccb", stars:true, grain:0.055, bloom:0.38 },
-  motion: { speed:1, loop:true, bars:true, aspect:2.0, drift:1, camera:1 }
+  motion: { speed:1, loop:true, bars:true, aspect:2.0, drift:1, camera:1, itemDur:2.90 }
 };
 const CFG = structuredClone(DEFAULTS);
+
+/* ─────────────────────────  SEQUENCE TIMING  ─────────────────────────
+   Derived, not hard-coded, so changing the card count or the per-card
+   beat length re-times the whole piece (and the scrubber) correctly.  */
+let DUR=1, SUM_IN=1, SUM_OUT=1;
+function pitchY(){ return CFG.frame.boxH+CFG.frame.gap }
+function cardBeat(i){ return i<=0?0:ACT1+(i-1)*CFG.motion.itemDur }
+function cardTimes(i){
+  if(i===0) return {curve0:CFG.path.start, curve1:CFG.path.end, pop:CFG.cb.pop, text:CFG.text.start, cam:0};
+  const b=cardBeat(i);
+  return {curve0:b+0.15, curve1:b+0.95, pop:b+0.92, text:b+1.22, cam:b};
+}
+function recomputeTiming(){
+  const n=CFG.items.length;
+  const last=n>1?cardBeat(n-1)+CFG.motion.itemDur:ACT1+1.4;
+  SUM_IN = CFG.summary.show ? last+0.30 : last;
+  SUM_OUT= SUM_IN + (CFG.summary.show?CFG.summary.travel:0);
+  DUR    = SUM_OUT + (CFG.summary.show?CFG.summary.hold:1.6);
+  if(typeof tcode!=='undefined'&&tcode) syncTransport();
+}
 
 /* ─────────────────────────────  UTILS  ───────────────────────────── */
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -310,10 +350,44 @@ const CAM = track([
   [1.83,   180, 485, 0.556],
   [2.55,   560, 486, 0.760],
   [3.00,   878, 484, 1.000],
-  [4.20,   934, 484, 1.012],
-  [5.60,   968, 484, 1.028],
-  [DUR,    986, 484, 1.038]
+  [4.20,   940, 484, 1.004],
+  [ACT1,   968, 484, 1.000]
 ]);
+
+/* How far the cards have gathered into the closing recap: 0 = stacked in the
+   ladder at hero size, 1 = the five-row list. Drives the camera too, so the
+   move and the re-layout stay locked together. */
+function summaryBlend(t){
+  if(!CFG.summary.show)return 0;
+  return smooth(clamp((t-SUM_IN)/Math.max(.01,SUM_OUT-SUM_IN),0,1));
+}
+function cameraAt(t,out){
+  const n=CFG.items.length, P=pitchY();
+  if(t<=ACT1) return CAM(t,out);
+  const s=summaryBlend(t);
+  if(s>0){                                   // gather: last card → whole list
+    out[0]=lerp(968,DW/2,s); out[1]=lerp(484+(n-1)*P,DH/2,s); out[2]=1;
+    return out;
+  }
+  const k=clamp(Math.floor((t-ACT1)/CFG.motion.itemDur)+1,1,Math.max(1,n-1));
+  const p=smooth(clamp(((t-ACT1)-(k-1)*CFG.motion.itemDur)/1.15,0,1));
+  out[0]=968; out[1]=lerp(484+(k-1)*P,484+k*P,p); out[2]=1;
+  return out;
+}
+
+/* A card's rect at blend s, plus where its headline sits. Everything else
+   inside the card (crystal, numeral) is derived from this rect by ratio. */
+function cardLayout(i,s){
+  const F=CFG.frame,L=CFG.summary,P=pitchY();
+  const ay=F.y+i*P, by=L.y+i*L.pitch;
+  return {
+    x:lerp(F.x,L.x,s), y:lerp(ay,by,s),
+    w:lerp(F.boxW,L.box,s), h:lerp(F.boxH,L.box,s),
+    tx:lerp(CFG.text.x,L.x+L.box+L.gap,s),
+    ty:lerp(ay+F.boxH/2,by+L.box/2,s),
+    ts:lerp(CFG.text.size,L.textSize,s)
+  };
+}
 
 /* intro crystal, authored directly in screen space (it flies past the lens) */
 const CA_POS = track([
@@ -682,150 +756,206 @@ function paintBackground(t,cam){
   ctx.globalAlpha=1;
 }
 
-function paintFrame(t,alpha){
+/* Reveal weight for card i: 0 before its beat, 1 once the camera is on it. */
+function cardReveal(t,i){
+  if(i===0)return smooth(clamp((t-0.30)/0.55,0,1));
+  return smooth(clamp((t-(cardBeat(i)-0.55))/1.05,0,1));
+}
+
+function paintCards(t,alpha,s){
   if(!CFG.frame.show)return;
-  const F=CFG.frame;
-  const a=alpha*smooth(clamp((t-0.30)/0.55,0,1));
-  if(a<=0.002)return;
-  const step=F.boxH+F.gap;
-  const x0=F.x, x1=F.x+F.boxW;
-  /* the trailing box above the hero only exists during the entry pass —
-     it scrolls out of the shot as the camera settles */
-  const trail=1-smooth(clamp((t-1.02)/0.62,0,1));   // the box above scrolls away
+  const F=CFG.frame, n=CFG.items.length;
+  const base=alpha*smooth(clamp((t-0.30)/0.55,0,1));
+  if(base<=0.002)return;
   const dotA=F.dots?smooth(clamp((t-1.00)/0.70,0,1)):0;
-  const fc=hex2rgb(F.color);
-  for(const [k,w] of [[-1,0.92*trail],[0,1]]){
-    const y0=F.y+k*step, y1=y0+F.boxH, fa=a*w;
+  const fc=hex2rgb(F.color), gl=F.glow*lerp(1,S_GLOW,s);
+
+  /* decorative box above card 1 — part of the entry, gone once we settle */
+  const trail=(1-smooth(clamp((t-1.02)/0.62,0,1)))*(1-s);
+  if(trail>0.01){
+    const y0=F.y-pitchY();
+    glowLine(()=>{ctx.rect(F.x,y0,F.boxW,F.boxH)},F.color,F.width,F.glow,base*0.92*trail);
+  }
+
+  for(let i=0;i<n;i++){
+    const o=cardLayout(i,s);
+    /* unvisited cards sit dimmed in the ladder; the recap brings them all up */
+    const fa=base*lerp(F.dim,1,Math.max(cardReveal(t,i),s));
     if(fa<0.01)continue;
-    glowLine(()=>{ctx.rect(x0,y0,F.boxW,F.boxH)},F.color,F.width,F.glow,fa);
+    glowLine(()=>{ctx.rect(o.x,o.y,o.w,o.h)},F.color,F.width,gl,fa);
     if(dotA>0.01){
-      const dr=F.dotR;
-      glowDot(x0,y0,dr,F.color,F.glow,fa*dotA);glowDot(x1,y0,dr,F.color,F.glow,fa*dotA);
-      glowDot(x0,y1,dr,F.color,F.glow,fa*dotA);glowDot(x1,y1,dr,F.color,F.glow,fa*dotA);
+      const dr=F.dotR*lerp(1,0.5,s), d=fa*dotA;
+      glowDot(o.x,o.y,dr,F.color,gl,d);        glowDot(o.x+o.w,o.y,dr,F.color,gl,d);
+      glowDot(o.x,o.y+o.h,dr,F.color,gl,d);    glowDot(o.x+o.w,o.y+o.h,dr,F.color,gl,d);
+      if(s<0.99)glowDot(o.x,o.y+o.h/2,dr,F.color,gl,d*(1-s));  // node the curve lands on
     }
   }
-  /* the lower box is open-ended — its rails run off the bottom of the shot */
-  const ty=F.y+step, tb=ty+F.boxH*2.2, ta=a*0.86;
-  glowLine(()=>{ctx.moveTo(x0,ty);ctx.lineTo(x1,ty)},F.color,F.width,F.glow,ta);
-  const gg=ctx.createLinearGradient(0,ty,0,tb);
-  gg.addColorStop(0,rgba(fc,1));gg.addColorStop(0.5,rgba(fc,0.55));gg.addColorStop(1,rgba(fc,0));
-  ctx.lineCap='round';ctx.strokeStyle=gg;
-  for(const [lw,al] of [[F.width*5.2,0.10*F.glow],[F.width*2.4,0.22*F.glow],[F.width,1]]){
-    ctx.lineWidth=lw;ctx.globalAlpha=al*ta;
-    ctx.beginPath();ctx.moveTo(x0,ty);ctx.lineTo(x0,tb);ctx.moveTo(x1,ty);ctx.lineTo(x1,tb);ctx.stroke();
-  }
-  ctx.globalAlpha=1;
-  if(dotA>0.01){
-    glowDot(x0,ty,F.dotR,F.color,F.glow,ta*dotA);glowDot(x1,ty,F.dotR,F.color,F.glow,ta*dotA);
-    /* connector node on the hero box's left edge, where the curve lands */
-    glowDot(x0,F.y+F.boxH/2,F.dotR,F.color,F.glow,a*dotA);
+
+  /* below the last card the ladder runs open-ended off the bottom of frame */
+  const ta=base*0.86*(1-s);
+  if(ta>0.01){
+    const x0=F.x,x1=F.x+F.boxW, ty=F.y+n*pitchY(), tb=ty+F.boxH*2.2;
+    glowLine(()=>{ctx.moveTo(x0,ty);ctx.lineTo(x1,ty)},F.color,F.width,F.glow,ta);
+    const gg=ctx.createLinearGradient(0,ty,0,tb);
+    gg.addColorStop(0,rgba(fc,1));gg.addColorStop(0.5,rgba(fc,0.55));gg.addColorStop(1,rgba(fc,0));
+    ctx.lineCap='round';ctx.strokeStyle=gg;
+    for(const [lw,al] of [[F.width*5.2,0.10*F.glow],[F.width*2.4,0.22*F.glow],[F.width,1]]){
+      ctx.lineWidth=lw;ctx.globalAlpha=al*ta;
+      ctx.beginPath();ctx.moveTo(x0,ty);ctx.lineTo(x0,tb);ctx.moveTo(x1,ty);ctx.lineTo(x1,tb);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
   }
 }
 
-function paintPath(t,alpha){
-  if(!CFG.path.show)return;
-  const P=CFG.path;
-  const p=smooth(clamp((t-P.start)/Math.max(0.01,P.end-P.start),0,1));
-  if(p<=0.001)return;
+/* Every card gets the same S-curve arriving at its left node, so the reveal
+   language repeats down the ladder. The curves retract for the recap. */
+function paintPaths(t,alpha,s){
+  if(!CFG.path.show||s>=0.999)return;
+  const P=CFG.path, a=alpha*(1-s);
   const [A,B,C,D]=CURVE;
-  const bez=u=>{
-    const m=1-u,m2=m*m,m3=m2*m,u2=u*u,u3=u2*u;
-    return[m3*A[0]+3*m2*u*B[0]+3*m*u2*C[0]+u3*D[0],
-           m3*A[1]+3*m2*u*B[1]+3*m*u2*C[1]+u3*D[1]];
-  };
-  const N=56;
-  glowLine(()=>{
-    const s0=bez(0);ctx.moveTo(s0[0],s0[1]);
-    for(let i=1;i<=N;i++){const q=bez(i/N*p);ctx.lineTo(q[0],q[1])}
-  },P.color,P.width,P.glow,alpha);
-  if(p<0.999){
-    const tip=bez(p);
-    glowDot(tip[0],tip[1],CFG.path.width*1.5,P.color,P.glow,alpha);
+  for(let i=0;i<CFG.items.length;i++){
+    const T=cardTimes(i);
+    const p=smooth(clamp((t-T.curve0)/Math.max(0.01,T.curve1-T.curve0),0,1));
+    if(p<=0.001)continue;
+    const dy=i*pitchY();
+    const bez=u=>{
+      const m=1-u,m2=m*m,m3=m2*m,u2=u*u,u3=u2*u;
+      return[m3*A[0]+3*m2*u*B[0]+3*m*u2*C[0]+u3*D[0],
+             m3*A[1]+3*m2*u*B[1]+3*m*u2*C[1]+u3*D[1]+dy];
+    };
+    const N=56;
+    glowLine(()=>{
+      const s0=bez(0);ctx.moveTo(s0[0],s0[1]);
+      for(let k=1;k<=N;k++){const q=bez(k/N*p);ctx.lineTo(q[0],q[1])}
+    },P.color,P.width,P.glow,a);
+    if(p<0.999){
+      const tip=bez(p);
+      glowDot(tip[0],tip[1],P.width*1.5,P.color,P.glow,a);
+    }
   }
 }
 
-function paintBadge(t,alpha){
+/* The numeral sitting behind each card's crystal. */
+function paintMark(t,alpha,s){
   const B=CFG.badge;
-  if(!B.show||!B.body)return;
-  const a=alpha*B.opacity*smooth(clamp((t-CFG.cb.pop-0.05)/0.55,0,1));
-  if(a<=0.004)return;
+  if(!B.show)return;
   ctx.save();
-  ctx.globalAlpha=a;
   ctx.fillStyle=B.color;
-  if(B.mode==='mark'){
-    /* The source numeral is custom art, not a font glyph — a long thin flag
-       raked back at ~40° off a broad flat-footed stem. Traced as a single
-       closed outline so the two parts share an edge without a seam. */
-    const h=B.size, w=h*0.5235, x=B.x-w/2, y=B.y-h/2;
-    const P=[[0.519,0],[1,0],[1,1],[0.519,1],[0.519,0.235],[0.009,0.407],[0,0.160]];
-    ctx.beginPath();
-    ctx.moveTo(x+P[0][0]*w,y+P[0][1]*h);
-    for(let i=1;i<P.length;i++)ctx.lineTo(x+P[i][0]*w,y+P[i][1]*h);
-    ctx.closePath();ctx.fill();
-  }else{
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.font=`${B.weight} ${B.size}px ${CFG.text.font}`;
-    ctx.fillText(B.body,B.x,B.y);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let i=0;i<CFG.items.length;i++){
+    const label=CFG.items[i].mark;
+    if(!label)continue;
+    const a=alpha*B.opacity*smooth(clamp((t-cardTimes(i).pop-0.05)/0.55,0,1));
+    if(a<=0.004)continue;
+    const o=cardLayout(i,s);
+    const mx=o.x+R_MARK_X*o.w, my=o.y+R_MARK_Y*o.h;
+    ctx.globalAlpha=a;
+    if(B.mode==='mark'){
+      /* The source numeral is custom art, not a font glyph — a long thin flag
+         raked back at ~40° off a broad flat-footed stem. Traced as a single
+         closed outline so the two parts share an edge without a seam. */
+      const h=o.h*lerp(R_MARK_ART,S_MARK_ART,s)*B.scale, w=h*0.5235, x=mx-w/2, y=my-h/2;
+      const P=[[0.519,0],[1,0],[1,1],[0.519,1],[0.519,0.235],[0.009,0.407],[0,0.160]];
+      ctx.beginPath();
+      ctx.moveTo(x+P[0][0]*w,y+P[0][1]*h);
+      for(let k=1;k<P.length;k++)ctx.lineTo(x+P[k][0]*w,y+P[k][1]*h);
+      ctx.closePath();ctx.fill();
+    }else{
+      ctx.font=`${B.weight} ${o.h*lerp(R_MARK_TEXT,S_MARK_TEXT,s)*B.scale}px ${CFG.text.font}`;
+      ctx.fillText(label,mx,my);
+    }
   }
   ctx.restore();
 }
 
+/* One crystal per card, popped in on that card's beat. */
+function paintCrystals(t,alpha,s,drift){
+  const C=CFG.cb;
+  for(let i=0;i<CFG.items.length;i++){
+    const T=cardTimes(i);
+    const pp=clamp((t-T.pop)/0.75,0,1);
+    if(pp<=0)continue;
+    const it=CFG.items[i], o=cardLayout(i,s), pop=easeOutBack(pp);
+    drawCrystal(meshB,{
+      x:o.x+R_CRYSTAL_X*o.w,
+      y:o.y+R_CRYSTAL_Y*o.h+Math.sin((t-T.pop)*1.05)*10*drift*(1-s),
+      size:o.h*lerp(R_CRYSTAL_S,S_CRYSTAL,s)*C.scale*pop,
+      rx:0.10+Math.sin(t*0.42+i)*0.07,
+      ry:-0.45+(t-T.pop)*C.spin,
+      rz:Math.sin(t*0.33+i)*0.045,
+      top:it.top, bottom:it.bottom, edge:C.edge,
+      alpha:alpha*clamp(pp*1.6,0,1), glow:C.glow
+    });
+  }
+}
+
 /* ────────────────────────────  HEADLINE  ──────────────────────────── */
-const layer=document.getElementById('textLayer'), head=document.getElementById('headline');
-let chars=[];
+const layer=document.getElementById('textLayer'), headHost=document.getElementById('headline');
+let heads=[];   // one block per card: {el, chars, start}
 function buildText(){
   const T=CFG.text;
-  head.innerHTML='';
-  head.style.left=T.x+'px';
-  head.style.top=T.y+'px';
-  head.style.font=`${T.weight} ${T.size}px/1.15 ${T.font}`;
-  head.style.letterSpacing=T.tracking+'px';
-  head.style.color=T.color;
-
-  /* *asterisks* mark the emphasised run */
-  const parts=String(T.body).split(/(\*[^*]*\*)/g).filter(s=>s!=='');
-  const frag=document.createDocumentFragment();
-  chars=[];
-  for(const part of parts){
-    const em=part.startsWith('*')&&part.endsWith('*')&&part.length>1;
-    const txt=em?part.slice(1,-1):part;
-    for(const ch of txt){
-      const s=document.createElement('span');
-      s.textContent=ch;
-      if(em){
-        s.style.fontWeight=T.emWeight;
-        s.style.fontStyle=T.emItalic?'italic':'normal';
-        s.style.color=T.emColor;
+  headHost.innerHTML='';
+  headHost.removeAttribute('style');
+  heads=[];
+  for(let i=0;i<CFG.items.length;i++){
+    const el=document.createElement('div');
+    el.className='hl';
+    el.style.font=`${T.weight} ${T.size}px/1.15 ${T.font}`;
+    el.style.letterSpacing=T.tracking+'px';
+    el.style.color=T.color;
+    const chars=[];
+    /* *asterisks* mark the emphasised run */
+    const parts=String(CFG.items[i].title||'').split(/(\*[^*]*\*)/g).filter(s=>s!=='');
+    for(const part of parts){
+      const em=part.startsWith('*')&&part.endsWith('*')&&part.length>1;
+      for(const ch of (em?part.slice(1,-1):part)){
+        const s=document.createElement('span');
+        s.textContent=ch;
+        if(em){
+          s.style.fontWeight=T.emWeight;
+          s.style.fontStyle=T.emItalic?'italic':'normal';
+          s.style.color=T.emColor;
+        }
+        s.style.textShadow=`0 0 ${18*T.glow}px rgba(255,255,255,${0.55*T.glow}), 0 0 ${46*T.glow}px rgba(255,255,255,${0.25*T.glow})`;
+        s._lvl=-2;
+        el.appendChild(s);
+        chars.push({el:s});
       }
-      s.style.textShadow=`0 0 ${18*T.glow}px rgba(255,255,255,${0.55*T.glow}), 0 0 ${46*T.glow}px rgba(255,255,255,${0.25*T.glow})`;
-      s._lvl=-2;
-      frag.appendChild(s);
-      chars.push({el:s,blank:ch===' '});
     }
+    headHost.appendChild(el);
+    heads.push({el,chars,start:cardTimes(i).text});
   }
-  head.appendChild(frag);
 }
-function paintText(t,cam,alpha){
+function resetText(){ for(const h of heads)for(const c of h.chars)c.el._done=false }
+
+function paintText(t,cam,alpha,s){
   const T=CFG.text;
   layer.style.transform=
     `translate(${W/2}px,${H/2}px) scale(${cam[2]*S}) translate(${-cam[0]}px,${-cam[1]}px)`;
   layer.style.opacity=alpha;
-  for(let i=0;i<chars.length;i++){
-    const c=chars[i];
-    const p=clamp((t-(T.start+i*T.stagger))/Math.max(.02,T.charDur),0,1);
-    const lvl=p>=1?8:Math.min(7,Math.floor((1-p)*8.6));
-    if(c.el._lvl!==lvl){
-      c.el.style.filter=lvl>=8?'none':`url(#hb${lvl})`;
-      c.el._lvl=lvl;
-    }
-    if(p>=1){
-      if(c.el._done)continue;
-      c.el.style.opacity='1';c.el.style.transform='none';c.el._done=true;
-    }else{
-      c.el._done=false;
-      const e=easeOutCubic(p);
-      c.el.style.opacity=String(p<=0?0:Math.pow(p,0.7));
-      c.el.style.transform=`translateX(${(1-e)*T.slide}px)`;
+  for(let n=0;n<heads.length;n++){
+    const h=heads[n], o=cardLayout(n,s);
+    const st=h.el.style;
+    /* the block re-anchors and re-scales as the cards gather into the recap */
+    st.left=o.tx+'px'; st.top=o.ty+'px'; st.fontSize=o.ts+'px';
+    const start=cardTimes(n).text;
+    for(let i=0;i<h.chars.length;i++){
+      const c=h.chars[i];
+      const p=clamp((t-(start+i*T.stagger))/Math.max(.02,T.charDur),0,1);
+      const lvl=p>=1?8:Math.min(7,Math.floor((1-p)*8.6));
+      if(c.el._lvl!==lvl){
+        c.el.style.filter=lvl>=8?'none':`url(#hb${lvl})`;
+        c.el._lvl=lvl;
+      }
+      if(p>=1){
+        if(c.el._done)continue;
+        c.el.style.opacity='1';c.el.style.transform='none';c.el._done=true;
+      }else{
+        c.el._done=false;
+        const e=easeOutCubic(p);
+        c.el.style.opacity=String(p<=0?0:Math.pow(p,0.7));
+        c.el.style.transform=`translateX(${(1-e)*T.slide}px)`;
+      }
     }
   }
 }
@@ -851,7 +981,7 @@ function frame(now){
   if(playing){
     playhead+=dt*CFG.motion.speed;
     if(playhead>=DUR){
-      if(CFG.motion.loop){playhead-=DUR;for(const c of chars)c.el._done=false}
+      if(CFG.motion.loop){playhead-=DUR;resetText()}
       else{playhead=DUR;playing=false;syncPlayIcon()}
     }
   }
@@ -870,7 +1000,8 @@ function frame(now){
 
 function render(t,wall){
   const M=CFG.motion;
-  CAM(t,camArr);
+  cameraAt(t,camArr);
+  const s=summaryBlend(t);
   /* idle breathing so the shot never sits perfectly still */
   const cam=[
     camArr[0]+Math.sin(wall*0.34)*9*M.drift,
@@ -889,25 +1020,10 @@ function render(t,wall){
   /* ── world layer ── */
   setWorld(cam);
   ctx.globalAlpha=1;
-  paintPath(t,fade);
-  paintFrame(t,fade);
-  paintBadge(t,fade);
-
-  /* hero crystal */
-  const B=CFG.cb;
-  const pp=clamp((t-B.pop)/0.75,0,1);
-  if(pp>0){
-    const pop=easeOutBack(pp);
-    const bob=Math.sin((t-B.pop)*1.05)*10*M.drift;
-    drawCrystal(meshB,{
-      x:B.x, y:B.y+bob, size:B.size*pop,
-      rx:0.10+Math.sin(t*0.42)*0.07,
-      ry:-0.45+t*B.spin,
-      rz:Math.sin(t*0.33)*0.045,
-      top:B.top, bottom:B.bottom, edge:B.edge,
-      alpha:fade*clamp(pp*1.6,0,1), glow:B.glow
-    });
-  }
+  paintPaths(t,fade,s);
+  paintCards(t,fade,s);
+  paintMark(t,fade,s);
+  paintCrystals(t,fade,s,M.drift);
 
   /* ── screen layer (intro crystal flies past the lens) ── */
   setScreen();
@@ -930,7 +1046,7 @@ function render(t,wall){
   paintVignette();
   if(CFG.bg.grain>0.002&&autoQuality>0.6)paintGrain(wall);
 
-  paintText(t,cam,fade);
+  paintText(t,cam,fade,s);
 }
 
 function applyBloom(strength){
@@ -981,8 +1097,7 @@ const FONTS=[
   ["Monospace","ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"]
 ];
 const SCHEMA=[
- {title:"Headline",open:true,hint:"Wrap any run in <code>*asterisks*</code> to style it as the emphasis word.",items:[
-   {k:"text.body",l:"Text",t:"area"},
+ {title:"Headline style",open:true,hint:"Applies to all five cards. Wrap any run of a card’s title in <code>*asterisks*</code> to style it as the emphasis word.",items:[
    {k:"text.font",l:"Font",t:"sel",o:FONTS},
    {k:"text.size",l:"Size",t:"rng",min:16,max:110,step:1},
    {k:"text.weight",l:"Weight",t:"rng",min:300,max:900,step:100},
@@ -993,30 +1108,22 @@ const SCHEMA=[
    {k:"text.emItalic",l:"Accent italic",t:"bool"},
    {k:"text.emColor",l:"Accent col.",t:"col"},
    {k:"text.x",l:"Position X",t:"rng",min:0,max:1900,step:1},
-   {k:"text.y",l:"Position Y",t:"rng",min:0,max:968,step:1},
-   {k:"text.start",l:"Start at",t:"rng",min:0,max:5,step:.02,suf:"s"},
+   {k:"text.start",l:"Card 1 at",t:"rng",min:0,max:5,step:.02,suf:"s",retime:true},
    {k:"text.charDur",l:"Char dur.",t:"rng",min:.08,max:1.4,step:.01,suf:"s"},
    {k:"text.stagger",l:"Stagger",t:"rng",min:0,max:.2,step:.005,suf:"s"},
    {k:"text.slide",l:"Slide in",t:"rng",min:0,max:120,step:1}
  ]},
- {title:"Number card",hint:"The stylised mark is drawn as vector art. Switch to <code>Text label</code> to use any word or number in the headline font.",items:[
+ {title:"Numerals",hint:"Each card’s number is set in its own section above. <code>Stylised 1</code> is the source’s hand-drawn glyph — it only reads as a “1”, so it suits a single-card version.",items:[
    {k:"badge.show",l:"Show",t:"bool"},
-   {k:"badge.mode",l:"Style",t:"sel",o:[["Stylised 1 (matches source)","mark"],["Text label","text"]]},
-   {k:"badge.body",l:"Label",t:"txt"},
+   {k:"badge.mode",l:"Style",t:"sel",o:[["Numerals","text"],["Stylised 1 (source art)","mark"]]},
    {k:"badge.color",l:"Colour",t:"col"},
    {k:"badge.opacity",l:"Opacity",t:"rng",min:0,max:1,step:.01},
-   {k:"badge.size",l:"Size",t:"rng",min:80,max:900,step:2},
-   {k:"badge.weight",l:"Weight",t:"rng",min:300,max:900,step:100},
-   {k:"badge.x",l:"Position X",t:"rng",min:0,max:1900,step:1},
-   {k:"badge.y",l:"Position Y",t:"rng",min:0,max:968,step:1}
+   {k:"badge.scale",l:"Size",t:"rng",min:.2,max:2.2,step:.02},
+   {k:"badge.weight",l:"Weight",t:"rng",min:300,max:900,step:100}
  ]},
- {title:"Hero crystal",items:[
-   {k:"cb.top",l:"Tip colour",t:"col"},
-   {k:"cb.bottom",l:"Base colour",t:"col"},
+ {title:"Card crystals",hint:"Shape and finish are shared; each card’s two colours are in its own section above.",items:[
    {k:"cb.edge",l:"Edge glow",t:"col"},
-   {k:"cb.size",l:"Size",t:"rng",min:60,max:900,step:2},
-   {k:"cb.x",l:"Position X",t:"rng",min:0,max:1900,step:1},
-   {k:"cb.y",l:"Position Y",t:"rng",min:0,max:968,step:1},
+   {k:"cb.scale",l:"Size",t:"rng",min:.2,max:2.2,step:.02},
    {k:"cb.sides",l:"Facets",t:"rng",min:4,max:16,step:1,mesh:"b"},
    {k:"cb.bands",l:"Bands",t:"rng",min:1,max:5,step:1,mesh:"b"},
    {k:"cb.rough",l:"Roughness",t:"rng",min:0,max:.4,step:.01,mesh:"b"},
@@ -1025,7 +1132,7 @@ const SCHEMA=[
    {k:"cb.seed",l:"Shape seed",t:"rng",min:1,max:200,step:1,mesh:"b"},
    {k:"cb.glow",l:"Glow",t:"rng",min:0,max:2,step:.05},
    {k:"cb.spin",l:"Spin",t:"rng",min:-2,max:2,step:.02},
-   {k:"cb.pop",l:"Appears at",t:"rng",min:0,max:5,step:.02,suf:"s"}
+   {k:"cb.pop",l:"Card 1 at",t:"rng",min:0,max:5,step:.02,suf:"s"}
  ]},
  {title:"Intro crystal",items:[
    {k:"ca.top",l:"Tip colour",t:"col"},
@@ -1040,23 +1147,24 @@ const SCHEMA=[
    {k:"ca.glow",l:"Glow",t:"rng",min:0,max:2,step:.05},
    {k:"ca.spin",l:"Tumble",t:"rng",min:-2,max:2,step:.02}
  ]},
- {title:"Frame & path",items:[
+ {title:"Cards & path",items:[
    {k:"frame.show",l:"Show frame",t:"bool"},
    {k:"frame.color",l:"Colour",t:"col"},
    {k:"frame.width",l:"Thickness",t:"rng",min:1,max:20,step:.5},
    {k:"frame.glow",l:"Glow",t:"rng",min:0,max:2.5,step:.05},
-   {k:"frame.boxW",l:"Box width",t:"rng",min:120,max:1100,step:2},
-   {k:"frame.boxH",l:"Box height",t:"rng",min:120,max:1100,step:2},
+   {k:"frame.boxW",l:"Card width",t:"rng",min:120,max:1100,step:2},
+   {k:"frame.boxH",l:"Card height",t:"rng",min:120,max:1100,step:2},
    {k:"frame.gap",l:"Rail gap",t:"rng",min:0,max:120,step:1},
    {k:"frame.x",l:"Position X",t:"rng",min:-200,max:1400,step:1},
    {k:"frame.y",l:"Position Y",t:"rng",min:-300,max:800,step:1},
    {k:"frame.dots",l:"Corner nodes",t:"bool"},
    {k:"frame.dotR",l:"Node size",t:"rng",min:2,max:24,step:.5},
+   {k:"frame.dim",l:"Unvisited dim",t:"rng",min:0,max:1,step:.02},
    {k:"path.show",l:"Show path",t:"bool"},
    {k:"path.color",l:"Path colour",t:"col"},
    {k:"path.width",l:"Path width",t:"rng",min:1,max:20,step:.5},
-   {k:"path.start",l:"Draw from",t:"rng",min:0,max:5,step:.02,suf:"s"},
-   {k:"path.end",l:"Draw to",t:"rng",min:0,max:6,step:.02,suf:"s"}
+   {k:"path.start",l:"Card 1 from",t:"rng",min:0,max:5,step:.02,suf:"s"},
+   {k:"path.end",l:"Card 1 to",t:"rng",min:0,max:6,step:.02,suf:"s"}
  ]},
  {title:"Atmosphere",items:[
    {k:"bg.base",l:"Base",t:"col"},
@@ -1071,8 +1179,20 @@ const SCHEMA=[
    {k:"bg.grain",l:"Film grain",t:"rng",min:0,max:.25,step:.005},
    {k:"bg.bloom",l:"Bloom",t:"rng",min:0,max:1.2,step:.02}
  ]},
+ {title:"Closing recap",hint:"After the last card the ladder gathers into one readable list of all five.",items:[
+   {k:"summary.show",l:"Show recap",t:"bool",retime:true},
+   {k:"summary.travel",l:"Gather over",t:"rng",min:.6,max:5,step:.05,suf:"s",retime:true},
+   {k:"summary.hold",l:"Hold for",t:"rng",min:.4,max:8,step:.05,suf:"s",retime:true},
+   {k:"summary.x",l:"Left edge",t:"rng",min:0,max:1400,step:2},
+   {k:"summary.y",l:"Top edge",t:"rng",min:0,max:600,step:2},
+   {k:"summary.box",l:"Card size",t:"rng",min:40,max:340,step:2},
+   {k:"summary.pitch",l:"Row pitch",t:"rng",min:60,max:400,step:2},
+   {k:"summary.gap",l:"Text gap",t:"rng",min:0,max:300,step:2},
+   {k:"summary.textSize",l:"Text size",t:"rng",min:14,max:110,step:1}
+ ]},
  {title:"Motion & format",items:[
    {k:"motion.speed",l:"Speed",t:"rng",min:.2,max:2.5,step:.05,suf:"×"},
+   {k:"motion.itemDur",l:"Per card",t:"rng",min:1.2,max:7,step:.05,suf:"s",retime:true},
    {k:"motion.camera",l:"Camera move",t:"rng",min:0,max:1.4,step:.02},
    {k:"motion.drift",l:"Idle drift",t:"rng",min:0,max:3,step:.05},
    {k:"motion.loop",l:"Loop",t:"bool"},
@@ -1087,7 +1207,18 @@ const bound=[];
 function buildUI(){
   body.innerHTML='';
   bound.length=0;
-  for(const sec of SCHEMA){
+  /* one section per card, generated from the items array */
+  const cardSecs=CFG.items.map((it,i)=>({
+    title:`Card ${i+1} — ${(it.title||'untitled').replace(/\*/g,'').slice(0,22)}`,
+    open:i===0,
+    items:[
+      {k:`items.${i}.title`,l:"Title",t:"area",text:true},
+      {k:`items.${i}.mark`, l:"Number",t:"txt"},
+      {k:`items.${i}.top`,  l:"Tip colour",t:"col"},
+      {k:`items.${i}.bottom`,l:"Base colour",t:"col"}
+    ]
+  }));
+  for(const sec of cardSecs.concat(SCHEMA)){
     const d=document.createElement('details');
     d.className='sec'; if(sec.open)d.open=true;
     const s=document.createElement('summary');s.textContent=sec.title;d.appendChild(s);
@@ -1180,7 +1311,8 @@ function after(it){
   if(it.k==='bg.glow')bakeHaze();
   if(it.k==='bg.pColor')bakeBokeh();
   if(it.bars)resize();          // bars change the fit box, so re-derive the scale
-  if(it.k.startsWith('text.'))buildText();
+  if(it.retime)recomputeTiming();
+  if(it.text||it.k.startsWith('text.'))buildText();
 }
 
 function applyPreset(p){
@@ -1189,7 +1321,9 @@ function applyPreset(p){
     else dst[k]=src[k];
   }}};
   merge(CFG,p);
+  if(Array.isArray(p&&p.items)&&p.items.length)CFG.items=structuredClone(p.items);
   meshA=buildCrystal(CFG.ca);meshB=buildCrystal(CFG.cb);
+  recomputeTiming();
   buildText();
   resize();      // re-bakes the cached haze / vignette / bokeh from the new colours
   buildUI();
@@ -1212,12 +1346,12 @@ document.getElementById('bPlay').onclick=()=>{
   playing=!playing;syncPlayIcon();
 };
 document.getElementById('bRestart').onclick=restart;
-function restart(){playhead=0;playing=true;syncPlayIcon();for(const c of chars)c.el._done=false}
+function restart(){playhead=0;playing=true;syncPlayIcon();resetText()}
 scrub.addEventListener('pointerdown',()=>scrubbing=true);
 window.addEventListener('pointerup',()=>scrubbing=false);
 scrub.addEventListener('input',()=>{
   playhead=parseFloat(scrub.value)/1000*DUR;
-  for(const c of chars)c.el._done=false;
+  resetText();
   render(playhead,performance.now()/1000);
 });
 
@@ -1269,16 +1403,17 @@ function toast(msg){
 
 /* Small public API, handy for embedding or driving the piece from outside. */
 window.CrystalReveal={
-  cfg:CFG, duration:DUR, render, resize, applyPreset,
+  cfg:CFG, render, resize, applyPreset,
+  get duration(){return DUR},
   get time(){return playhead},
-  seek(t){playhead=clamp(t,0,DUR);for(const c of chars)c.el._done=false;render(playhead,performance.now()/1000)},
+  seek(t){playhead=clamp(t,0,DUR);resetText();render(playhead,performance.now()/1000)},
   play(){playing=true;syncPlayIcon()},
   pause(){playing=false;syncPlayIcon()},
-  refresh(){meshA=buildCrystal(CFG.ca);meshB=buildCrystal(CFG.cb);buildText();resize()}
+  refresh(){meshA=buildCrystal(CFG.ca);meshB=buildCrystal(CFG.cb);recomputeTiming();buildText();resize();buildUI()}
 };
 
 /* ─────────────────────────────  BOOT  ───────────────────────────── */
-resize();buildText();buildUI();syncPlayIcon();wake();
+recomputeTiming();resize();buildText();buildUI();syncPlayIcon();wake();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{buildText()});
 requestAnimationFrame(t=>{last=t;requestAnimationFrame(frame)});
 </script>

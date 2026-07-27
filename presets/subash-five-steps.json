@@ -1,0 +1,57 @@
+{
+  "items": [
+    {
+      "title": "Measure your Baseline",
+      "mark": "1",
+      "stone": "point",
+      "seed": 21,
+      "top": "#5ceef5",
+      "bottom": "#17b3d8",
+      "edge": "#c8feff"
+    },
+    {
+      "title": "Eliminate the Leakages",
+      "mark": "2",
+      "stone": "cluster",
+      "seed": 44,
+      "top": "#6a28f0",
+      "bottom": "#3a0e9e",
+      "edge": "#c9b0ff"
+    },
+    {
+      "title": "Kill Procrastination",
+      "mark": "3",
+      "stone": "point",
+      "seed": 67,
+      "top": "#d4123f",
+      "bottom": "#8e0a30",
+      "edge": "#ffb0c0"
+    },
+    {
+      "title": "A Magical Tool",
+      "mark": "4",
+      "stone": "point",
+      "seed": 12,
+      "top": "#ef5a2a",
+      "bottom": "#b83a1e",
+      "edge": "#ffd0a8"
+    },
+    {
+      "title": "Purpose",
+      "mark": "5",
+      "stone": "point",
+      "seed": 88,
+      "top": "#f4f4f6",
+      "bottom": "#c2c2ca",
+      "edge": "#ffffff"
+    }
+  ],
+  "ca": {
+    "top": "#1e5c86",
+    "bottom": "#35e0e6",
+    "edge": "#c8feff",
+    "radius": 0.3,
+    "glow": 1.45,
+    "rough": 0.11
+  }
+}

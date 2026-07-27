@@ -95,6 +95,27 @@ Open the panel with `C` or the slider icon. Every group updates live:
 - **Presets** — save to the browser, reload, reset to defaults, or export/import the whole
   configuration as JSON
 
+### Exporting an MP4
+
+`tools-render-mp4.js` renders the animation to H.264 frame by frame:
+
+```
+npm i playwright && npx playwright install chromium
+node tools-render-mp4.js                      # 1920x1080, 30fps, one full loop
+PRESET=presets/subash-five-steps.json OUT=out.mp4 FPS=60 node tools-render-mp4.js
+```
+
+Env: `PRESET` (JSON to apply first), `OUT`, `FPS`, `W`, `H`, `FFMPEG`, `CHROME`. Needs an
+ffmpeg with libx264 on `PATH` (or point `FFMPEG` at one).
+
+It steps frames through `CrystalReveal.frameAt(t)`, which ties the wall clock to the playhead —
+so idle drift and film grain are reproducible and the output is byte-identical every run, however
+fast or slow the machine renders. Screen-recording the page instead would drop frames and jitter
+the drift. It captures full-page screenshots rather than the canvas alone because the headlines
+are DOM elements layered over it.
+
+`presets/` holds saved configurations; the panel's **Export JSON** button produces the same shape.
+
 ### Notes
 
 - The file has **no network dependency**. Montserrat (latin, variable weight) is embedded as a
@@ -107,5 +128,7 @@ Open the panel with `C` or the slider icon. Every group updates live:
   framing is identical at any size or aspect ratio.
 - Rendering cost is dominated by the bloom and grain passes. If the frame rate drops, the page
   quietly steps those down and restores them when there is headroom again.
-- `window.CrystalReveal` exposes `cfg`, `seek(t)`, `play()`, `pause()`, `applyPreset(obj)` and
-  `refresh()` if you want to drive the animation from your own script.
+- `window.CrystalReveal` exposes `cfg`, `seek(t)`, `frameAt(t)`, `unlock()`, `play()`, `pause()`,
+  `applyPreset(obj)`, `refresh()` and `duration` if you want to drive the animation from your own
+  script. `frameAt(t)` parks the animation loop and renders one deterministic frame; call
+  `unlock()` to hand control back.

@@ -1057,7 +1057,7 @@ function layoutBars(){
 }
 
 /* ───────────────────────────  MAIN LOOP  ────────────────────────── */
-let playhead=0, playing=true, last=performance.now();
+let playhead=0, playing=true, last=performance.now(), locked=false;
 const camArr=[],caPos=[],caRot=[];
 let frameTimes=[],autoQuality=1;
 
@@ -1072,7 +1072,7 @@ function frame(now){
       else{playhead=DUR;playing=false;syncPlayIcon()}
     }
   }
-  render(playhead,now/1000);
+  if(!locked)render(playhead,now/1000);
   syncTransport();
 
   /* light-touch auto quality: back off the bloom if we can't hold ~40fps */
@@ -1546,6 +1546,12 @@ window.CrystalReveal={
   get duration(){return DUR},
   get time(){return playhead},
   seek(t){playhead=clamp(t,0,DUR);resetText();render(playhead,performance.now()/1000)},
+  /* Deterministic single frame: wall clock is tied to the playhead, so idle
+     drift and grain are reproducible. Parks the rAF loop so nothing repaints
+     over it — this is what makes a frame-by-frame export stable. */
+  frameAt(t){locked=true;playing=false;syncPlayIcon();
+    playhead=clamp(t,0,DUR);resetText();render(playhead,playhead);},
+  unlock(){locked=false},
   play(){playing=true;syncPlayIcon()},
   pause(){playing=false;syncPlayIcon()},
   refresh(){meshA=buildCrystal(CFG.ca);buildMeshes();recomputeTiming();buildText();resize();buildUI()}

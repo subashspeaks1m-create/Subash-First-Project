@@ -20,7 +20,7 @@ Five cards, each revealed with the same move, then gathered into a closing recap
 | 0.3s | blue quartz crystal tumbles in from the top right and sweeps past the lens |
 | 0.5s | the card ladder slides in as the camera pans right |
 | 1.2s | an S-curve draws itself from off-screen into card 1's left node |
-| 1.9s | purple crystal pops in over the numeral |
+| 1.9s | card 1's crystal pops in over the numeral |
 | 2.7s | **1 — Measure your Baseline** resolves out of a horizontal blur |
 | 5.2s | camera drops to card 2; curve, crystal and title repeat |
 | 8.1s | **3 — Kill Procrastination** |

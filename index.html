@@ -254,17 +254,32 @@ const R_MARK_ART=0.734,  R_MARK_TEXT=1.040;   // vector art vs. a font glyph
 const S_CRYSTAL=0.80, S_MARK_TEXT=0.86, S_MARK_ART=0.70, S_GLOW=0.55;
 
 /* ─────────────────────────────  DEFAULTS  ───────────────────────────── */
+/* Named silhouettes. Each card picks one, so the five differ in shape as
+   well as colour — a rough boulder next to a cut gem reads as a different
+   mineral, where five recoloured quartz points read as one prop tinted. */
+const STONES = {
+  point:   {sides:7,  bands:2, rough:0.07, radius:0.26, tip:0.46, shards:1},
+  rock:    {sides:11, bands:3, rough:0.24, radius:0.40, tip:0.16, shards:1},
+  gem:     {sides:6,  bands:1, rough:0.04, radius:0.46, tip:0.50, shards:1},
+  cluster: {sides:5,  bands:2, rough:0.16, radius:0.23, tip:0.60, shards:3},
+  pebble:  {sides:12, bands:3, rough:0.05, radius:0.34, tip:0.20, shards:1},
+  obelisk: {sides:6,  bands:2, rough:0.03, radius:0.19, tip:0.22, shards:1},
+  geode:   {sides:9,  bands:4, rough:0.22, radius:0.42, tip:0.12, shards:1}
+};
+const STONE_NAMES=[["Quartz point","point"],["Rough rock","rock"],["Cut gem","gem"],
+  ["Shard cluster","cluster"],["Smooth pebble","pebble"],["Obelisk","obelisk"],["Geode","geode"]];
+
 const DEFAULTS = {
   /* One gem per card. Every pair keeps the same value structure — a bright
      saturated tip over a deep base — so only the hue changes and the five
      still read as one family instead of a rainbow. The white frame and
      numerals stay neutral, leaving the crystals to carry all the colour. */
   items: [
-    { title:"Measure your Baseline", mark:"1", top:"#3fe4ff", bottom:"#0d2c73", edge:"#b6f6ff" }, // ice — instruments, cold data
-    { title:"Eliminate the Leakage", mark:"2", top:"#3ff09a", bottom:"#0a4436", edge:"#b9ffe0" }, // emerald — recovery, efficiency
-    { title:"Kill Procrastination",  mark:"3", top:"#ff4d5e", bottom:"#6a0f2b", edge:"#ffc2c8" }, // crimson — urgency
-    { title:"A Magical Tool",        mark:"4", top:"#ff3fe4", bottom:"#3a1a8e", edge:"#ffc0ff" }, // the source violet — magic
-    { title:"Purpose",               mark:"5", top:"#ffcf49", bottom:"#6b3d0c", edge:"#ffe9b0" }  // gold — the summit
+    { title:"Measure your Baseline", mark:"1", stone:"point",   seed:21, top:"#3fe4ff", bottom:"#0d2c73", edge:"#b6f6ff" }, // ice quartz — a first reading
+    { title:"Eliminate the Leakage", mark:"2", stone:"rock",    seed:44, top:"#3ff09a", bottom:"#0a4436", edge:"#b9ffe0" }, // rough ore — the unrefined thing you clear
+    { title:"Kill Procrastination",  mark:"3", stone:"cluster", seed:67, top:"#ff4d5e", bottom:"#6a0f2b", edge:"#ffc2c8" }, // jagged shards — the fight
+    { title:"A Magical Tool",        mark:"4", stone:"gem",     seed:12, top:"#ff3fe4", bottom:"#3a1a8e", edge:"#ffc0ff" }, // a cut gem — the instrument
+    { title:"Purpose",               mark:"5", stone:"obelisk", seed:88, top:"#ffcf49", bottom:"#6b3d0c", edge:"#ffe9b0" }  // monolith — the summit
   ],
   text: {
     font: "'Montserrat',system-ui,sans-serif",
@@ -280,7 +295,8 @@ const DEFAULTS = {
   frame: { show:true, color:"#ffffff", width:5, glow:0.9, boxW:557, boxH:552, gap:23, x:359, y:121, dots:true, dotR:8, dim:0.42 },
   path:  { show:true, color:"#ffffff", width:4.5, glow:0.9, start:1.18, end:2.02 },
   /* the closing recap: every card gathered into one readable list */
-  summary: { show:true, x:592, y:52, box:148, pitch:176, gap:54, textSize:46, travel:2.20, hold:2.60 },
+  summary: { show:true, x:1046, y:34, box:168, pitch:180, gap:34, textSize:36, travel:2.20, hold:2.60,
+             hub:true, hubX:430, hubY:484, hubSize:640, fanBow:180 },
   bg: { base:"#0b0b0d", glow:"#8e8e93", brightness:1, vignette:0.75, particles:90, pSize:1,
         pSpeed:1, pColor:"#e7dccb", stars:true, grain:0.055, bloom:0.38 },
   motion: { speed:1, loop:true, bars:true, aspect:2.0, drift:1, camera:1, itemDur:2.90 }
@@ -569,7 +585,26 @@ function buildEdges(mesh){
     e.w=Math.abs(mesh.verts[e.a][1]-mesh.verts[e.b][1])<0.045?0.24:1;
   return out;
 }
-let meshA=buildCrystal(CFG.ca), meshB=buildCrystal(CFG.cb);
+let meshA=buildCrystal(CFG.ca);
+/* one mesh per card — the whole point is that they are different stones */
+let meshes=[];
+function stoneOf(it){return STONES[it.stone]||STONES.point}
+function buildMeshes(){
+  const C=CFG.cb;
+  meshes=CFG.items.map(it=>{
+    const k=stoneOf(it);
+    return buildCrystal({sides:k.sides,bands:k.bands,rough:k.rough,radius:k.radius,tip:k.tip,seed:it.seed||1});
+  });
+  /* a shard cluster is several small stones sharing one socket */
+  shardMeshes=CFG.items.map(it=>{
+    const k=stoneOf(it), n=k.shards|0;
+    if(n<2)return null;
+    return Array.from({length:n},(_,j)=>buildCrystal(
+      {sides:k.sides,bands:k.bands,rough:k.rough,radius:k.radius,tip:k.tip,seed:(it.seed||1)+j*37+5}));
+  });
+}
+let shardMeshes=[];
+buildMeshes();
 
 /* convex hull (monotone chain) — used for the silhouette glow + speckle */
 function hull(pts){
@@ -879,17 +914,62 @@ function paintCrystals(t,alpha,s,drift){
     const pp=clamp((t-T.pop)/0.75,0,1);
     if(pp<=0)continue;
     const it=CFG.items[i], o=cardLayout(i,s), pop=easeOutBack(pp);
-    drawCrystal(meshB,{
-      x:o.x+R_CRYSTAL_X*o.w,
-      y:o.y+R_CRYSTAL_Y*o.h+Math.sin((t-T.pop)*1.05)*10*drift*(1-s),
-      size:o.h*lerp(R_CRYSTAL_S,S_CRYSTAL,s)*C.scale*pop,
+    const cx=o.x+R_CRYSTAL_X*o.w;
+    const cy=o.y+R_CRYSTAL_Y*o.h+Math.sin((t-T.pop)*1.05)*10*drift*(1-s);
+    const size=o.h*lerp(R_CRYSTAL_S,S_CRYSTAL,s)*C.scale*pop;
+    const common={
       rx:0.10+Math.sin(t*0.42+i)*0.07,
       ry:-0.45+(t-T.pop)*C.spin,
       rz:Math.sin(t*0.33+i)*0.045,
       top:it.top, bottom:it.bottom, edge:it.edge||C.edge,
       alpha:alpha*clamp(pp*1.6,0,1), glow:C.glow
-    });
+    };
+    const shards=shardMeshes[i];
+    if(shards){
+      /* splay the cluster around the socket, tallest shard centred and last */
+      const n=shards.length;
+      for(let j=0;j<n;j++){
+        const f=(j/(n-1))*2-1;                       // -1 … +1 across the cluster
+        const lean=f*0.26, scale=1-Math.abs(f)*0.34;
+        drawCrystal(shards[j],{...common,
+          x:cx+f*size*0.15, y:cy+Math.abs(f)*size*0.16,
+          size:size*scale, rz:common.rz+lean});
+      }
+    }else{
+      drawCrystal(meshes[i],{...common,x:cx,y:cy,size});
+    }
   }
+}
+
+/* The closing hub: the stone from the opening returns at scale on the left
+   and fans a connector into every card, so the five read as one system. */
+function paintHub(t,alpha,s){
+  const L=CFG.summary;
+  if(!L.hub||s<=0.002)return;
+  const A=CFG.ca, a=alpha*s;
+  drawCrystal(meshA,{
+    x:L.hubX, y:L.hubY+Math.sin(t*0.5)*9, size:L.hubSize*lerp(0.72,1,s),
+    rx:0.06+Math.sin(t*0.31)*0.05, ry:t*A.spin*0.35, rz:-0.04+Math.sin(t*0.24)*0.03,
+    top:A.top, bottom:A.bottom, edge:A.edge, alpha:a, glow:A.glow
+  });
+  /* connectors draw on once the cards have mostly settled */
+  const P=CFG.path;
+  const fp=smooth(clamp((t-(SUM_IN+(SUM_OUT-SUM_IN)*0.45))/0.95,0,1));
+  if(!P.show||fp<=0.002)return;
+  const hx=L.hubX+L.hubSize*0.30, hy=L.hubY, bow=L.fanBow;
+  const N=34;
+  for(let i=0;i<CFG.items.length;i++){
+    const o=cardLayout(i,s), ex=o.x, ey=o.y+o.h/2;
+    glowLine(()=>{
+      ctx.moveTo(hx,hy);
+      for(let k=1;k<=N;k++){
+        const u=(k/N)*fp, m=1-u, m2=m*m, m3=m2*m, u2=u*u, u3=u2*u;
+        ctx.lineTo(m3*hx+3*m2*u*(hx+bow)+3*m*u2*(ex-bow)+u3*ex,
+                   m3*hy+3*m2*u*hy      +3*m*u2*ey      +u3*ey);
+      }
+    },P.color,P.width*0.62,P.glow,a*0.9);
+  }
+  glowDot(hx,hy,P.width*1.6,P.color,P.glow,a*fp);
 }
 
 /* ────────────────────────────  HEADLINE  ──────────────────────────── */
@@ -1027,6 +1107,7 @@ function render(t,wall){
   paintCards(t,fade,s);
   paintMark(t,fade,s);
   paintCrystals(t,fade,s,M.drift);
+  paintHub(t,fade,s);
 
   /* ── screen layer (intro crystal flies past the lens) ── */
   setScreen();
@@ -1124,14 +1205,8 @@ const SCHEMA=[
    {k:"badge.scale",l:"Size",t:"rng",min:.2,max:2.2,step:.02},
    {k:"badge.weight",l:"Weight",t:"rng",min:300,max:900,step:100}
  ]},
- {title:"Card crystals",hint:"Shape and finish are shared by all five; each card’s three colours live in its own section above.",items:[
+ {title:"Card crystals",hint:"Overall size, glow and spin for all five. Each card’s stone shape and its three colours live in its own section above.",items:[
    {k:"cb.scale",l:"Size",t:"rng",min:.2,max:2.2,step:.02},
-   {k:"cb.sides",l:"Facets",t:"rng",min:4,max:16,step:1,mesh:"b"},
-   {k:"cb.bands",l:"Bands",t:"rng",min:1,max:5,step:1,mesh:"b"},
-   {k:"cb.rough",l:"Roughness",t:"rng",min:0,max:.4,step:.01,mesh:"b"},
-   {k:"cb.radius",l:"Girth",t:"rng",min:.10,max:.9,step:.01,mesh:"b"},
-   {k:"cb.tip",l:"Point length",t:"rng",min:.02,max:1.2,step:.02,mesh:"b"},
-   {k:"cb.seed",l:"Shape seed",t:"rng",min:1,max:200,step:1,mesh:"b"},
    {k:"cb.glow",l:"Glow",t:"rng",min:0,max:2,step:.05},
    {k:"cb.spin",l:"Spin",t:"rng",min:-2,max:2,step:.02},
    {k:"cb.pop",l:"Card 1 at",t:"rng",min:0,max:5,step:.02,suf:"s"}
@@ -1190,7 +1265,12 @@ const SCHEMA=[
    {k:"summary.box",l:"Card size",t:"rng",min:40,max:340,step:2},
    {k:"summary.pitch",l:"Row pitch",t:"rng",min:60,max:400,step:2},
    {k:"summary.gap",l:"Text gap",t:"rng",min:0,max:300,step:2},
-   {k:"summary.textSize",l:"Text size",t:"rng",min:14,max:110,step:1}
+   {k:"summary.textSize",l:"Text size",t:"rng",min:14,max:110,step:1},
+   {k:"summary.hub",l:"Hub stone",t:"bool"},
+   {k:"summary.hubX",l:"Hub X",t:"rng",min:0,max:1900,step:2},
+   {k:"summary.hubY",l:"Hub Y",t:"rng",min:0,max:968,step:2},
+   {k:"summary.hubSize",l:"Hub size",t:"rng",min:100,max:1100,step:5},
+   {k:"summary.fanBow",l:"Fan bow",t:"rng",min:0,max:500,step:5}
  ]},
  {title:"Motion & format",items:[
    {k:"motion.speed",l:"Speed",t:"rng",min:.2,max:2.5,step:.05,suf:"×"},
@@ -1216,6 +1296,8 @@ function buildUI(){
     items:[
       {k:`items.${i}.title`,l:"Title",t:"area",text:true},
       {k:`items.${i}.mark`, l:"Number",t:"txt"},
+      {k:`items.${i}.stone`,l:"Stone",t:"sel",o:STONE_NAMES,stone:true},
+      {k:`items.${i}.seed`, l:"Shape seed",t:"rng",min:1,max:200,step:1,stone:true},
       {k:`items.${i}.top`,   l:"Tip colour",t:"col"},
       {k:`items.${i}.bottom`,l:"Base colour",t:"col"},
       {k:`items.${i}.edge`,  l:"Edge glow",t:"col"}
@@ -1309,7 +1391,7 @@ function control(it){
 
 function after(it){
   if(it.mesh==='a')meshA=buildCrystal(CFG.ca);
-  if(it.mesh==='b')meshB=buildCrystal(CFG.cb);
+  if(it.mesh==='b'||it.stone)buildMeshes();
   if(it.rebuild)buildParticles();
   if(it.k==='bg.glow')bakeHaze();
   if(it.k==='bg.pColor')bakeBokeh();
@@ -1325,7 +1407,7 @@ function applyPreset(p){
   }}};
   merge(CFG,p);
   if(Array.isArray(p&&p.items)&&p.items.length)CFG.items=structuredClone(p.items);
-  meshA=buildCrystal(CFG.ca);meshB=buildCrystal(CFG.cb);
+  meshA=buildCrystal(CFG.ca);buildMeshes();
   recomputeTiming();
   buildText();
   resize();      // re-bakes the cached haze / vignette / bokeh from the new colours
@@ -1412,7 +1494,7 @@ window.CrystalReveal={
   seek(t){playhead=clamp(t,0,DUR);resetText();render(playhead,performance.now()/1000)},
   play(){playing=true;syncPlayIcon()},
   pause(){playing=false;syncPlayIcon()},
-  refresh(){meshA=buildCrystal(CFG.ca);meshB=buildCrystal(CFG.cb);recomputeTiming();buildText();resize();buildUI()}
+  refresh(){meshA=buildCrystal(CFG.ca);buildMeshes();recomputeTiming();buildText();resize();buildUI()}
 };
 
 /* ─────────────────────────────  BOOT  ───────────────────────────── */

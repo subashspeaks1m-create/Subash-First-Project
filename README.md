@@ -17,8 +17,10 @@ Five cards, each revealed with the same move, then gathered into a closing recap
 | time | beat |
 |------|------|
 | 0.0s | dark bokeh field, drifting dust and stars |
-| 0.3s | blue quartz crystal tumbles in from the top right and sweeps past the lens |
-| 0.5s | the card ladder slides in as the camera pans right |
+| 0.3s | blue quartz tumbles in from the top right, matte against a near-black sky |
+| 0.7s | the stone ignites — a burst blooms out and whites the frame |
+| 0.75s | full blowout; the scene emerges brighter and the stone larger, the flash covering the jump |
+| 0.9s | the card ladder slides in as the camera pans right |
 | 1.2s | an S-curve draws itself from off-screen into card 1's left node |
 | 1.9s | card 1's crystal pops in over the numeral |
 | 2.7s | **1 — Measure your Baseline** resolves out of a horizontal blur |
@@ -35,17 +37,18 @@ the five read as five minerals rather than one prop recoloured:
 | card | stone | colour | why |
 |------|-------|--------|-----|
 | 1 — Measure your Baseline | quartz point | ice cyan | instruments, cold data, a first reading |
-| 2 — Eliminate the Leakage | rough boulder | emerald | the unrefined thing you are clearing out |
+| 2 — Eliminate the Leakage | spindle | emerald | the clean line you recover |
 | 3 — Kill Procrastination | shard cluster | crimson | jagged, the one you have to fight |
 | 4 — A Magical Tool | cut gem | violet | the instrument — and the source clip's own colour |
 | 5 — Purpose | obelisk | gold | the monolith at the summit |
 
-Shapes come from a small library of named silhouettes (quartz point, rough rock, cut gem, shard
-cluster, smooth pebble, obelisk, geode) — pick one per card from the panel, and the shape seed
-re-rolls its irregularities. A cluster is several stones splayed around one socket, not a single
-mesh. Colour pairs all keep the same value structure — a bright saturated tip over a deep base —
-so only hue varies and the set still holds together. The frame and numerals stay neutral white,
-leaving the stones to carry all the colour.
+The card stones are cut slim; the opening stone is deliberately not, since it is the chunky
+quartz the source clip opens on. Five silhouettes are available (quartz point, spindle, shard
+cluster, cut gem, obelisk) — pick one per card from the panel, and the shape seed re-rolls its
+irregularities. A cluster is several stones splayed around one socket, not a single mesh. Colour
+pairs all keep the same value structure — a bright saturated tip over a deep base — so only hue
+varies and the set still holds together. The frame and numerals stay neutral white, leaving the
+stones to carry all the colour.
 
 Cards ahead of the camera sit dimmed in the ladder and brighten as each is reached, so the
 whole list is always implied before it is read. Total runtime is derived from the card count and
@@ -76,8 +79,10 @@ Open the panel with `C` or the slider icon. Every group updates live:
 - **Headline style** — font, size, weight, tracking, colour, glow, position, and the reveal
   timing (start, per-character duration, stagger, slide distance), shared across all cards
 - **Numerals** — style, colour, opacity, size and weight of the number behind each crystal
-- **Card crystals / Intro crystal** — overall size, glow, spin and when card 1 appears. Each
-  card's stone shape and colours live in its own section.
+- **Card crystals / Intro crystal** — overall size, glow, spin and when card 1 appears, plus the
+  opening stone's own shape, colours and its ignition flash (when it fires, how fast it blooms in
+  and out, how long the stone glows beforehand, and the flash colour). Each card's stone shape
+  and colours live in its own section.
 - **Cards & path** — colour, thickness, glow, card size, rail gap, position, corner nodes, how
   far unvisited cards are dimmed, and the curve's draw-in window
 - **Closing recap** — whether to show it, how long the gather takes, how long it holds, the full

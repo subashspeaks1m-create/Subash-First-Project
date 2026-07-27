@@ -258,16 +258,14 @@ const S_CRYSTAL=0.80, S_MARK_TEXT=0.86, S_MARK_ART=0.70, S_GLOW=0.55;
    well as colour — a rough boulder next to a cut gem reads as a different
    mineral, where five recoloured quartz points read as one prop tinted. */
 const STONES = {
-  point:   {sides:7,  bands:2, rough:0.07, radius:0.26, tip:0.46, shards:1},
-  rock:    {sides:11, bands:3, rough:0.24, radius:0.40, tip:0.16, shards:1},
-  gem:     {sides:6,  bands:1, rough:0.04, radius:0.46, tip:0.50, shards:1},
-  cluster: {sides:5,  bands:2, rough:0.16, radius:0.23, tip:0.60, shards:3},
-  pebble:  {sides:12, bands:3, rough:0.05, radius:0.34, tip:0.20, shards:1},
-  obelisk: {sides:6,  bands:2, rough:0.03, radius:0.19, tip:0.22, shards:1},
-  geode:   {sides:9,  bands:4, rough:0.22, radius:0.42, tip:0.12, shards:1}
+  point:   {sides:7,  bands:2, rough:0.07, radius:0.195, tip:0.50, shards:1},
+  spindle: {sides:12, bands:3, rough:0.04, radius:0.175, tip:0.46, shards:1},
+  cluster: {sides:5,  bands:2, rough:0.14, radius:0.150, tip:0.66, shards:3},
+  gem:     {sides:6,  bands:1, rough:0.04, radius:0.260, tip:0.62, shards:1},
+  obelisk: {sides:6,  bands:2, rough:0.03, radius:0.145, tip:0.26, shards:1}
 };
-const STONE_NAMES=[["Quartz point","point"],["Rough rock","rock"],["Cut gem","gem"],
-  ["Shard cluster","cluster"],["Smooth pebble","pebble"],["Obelisk","obelisk"],["Geode","geode"]];
+const STONE_NAMES=[["Quartz point","point"],["Spindle","spindle"],["Shard cluster","cluster"],
+  ["Cut gem","gem"],["Obelisk","obelisk"]];
 
 const DEFAULTS = {
   /* One gem per card. Every pair keeps the same value structure — a bright
@@ -276,7 +274,7 @@ const DEFAULTS = {
      numerals stay neutral, leaving the crystals to carry all the colour. */
   items: [
     { title:"Measure your Baseline", mark:"1", stone:"point",   seed:21, top:"#3fe4ff", bottom:"#0d2c73", edge:"#b6f6ff" }, // ice quartz — a first reading
-    { title:"Eliminate the Leakage", mark:"2", stone:"rock",    seed:44, top:"#3ff09a", bottom:"#0a4436", edge:"#b9ffe0" }, // rough ore — the unrefined thing you clear
+    { title:"Eliminate the Leakage", mark:"2", stone:"spindle", seed:44, top:"#3ff09a", bottom:"#0a4436", edge:"#b9ffe0" }, // smooth spindle — the clean line you recover
     { title:"Kill Procrastination",  mark:"3", stone:"cluster", seed:67, top:"#ff4d5e", bottom:"#6a0f2b", edge:"#ffc2c8" }, // jagged shards — the fight
     { title:"A Magical Tool",        mark:"4", stone:"gem",     seed:12, top:"#ff3fe4", bottom:"#3a1a8e", edge:"#ffc0ff" }, // a cut gem — the instrument
     { title:"Purpose",               mark:"5", stone:"obelisk", seed:88, top:"#ffcf49", bottom:"#6b3d0c", edge:"#ffe9b0" }  // monolith — the summit
@@ -289,7 +287,7 @@ const DEFAULTS = {
     start: 2.66, charDur: 0.40, stagger: 0.038, slide: 26
   },
   badge: { show:true, mode:"text", color:"#f2f2f7", opacity:0.5, weight:800, scale:1 },
-  ca: { top:"#0d2f74", bottom:"#2fe6ff", edge:"#b6f6ff", sides:9, bands:3, rough:0.19, radius:0.30, tip:0.32, glow:0.85, spin:0.55, seed:7 },
+  ca: { top:"#071a45", bottom:"#2fe6ff", edge:"#b6f6ff", sides:9, bands:3, rough:0.21, radius:0.38, tip:0.30, glow:0.85, spin:0.55, seed:7 },
   cb: { edge:"#ffc0ff", sides:7, bands:2, rough:0.07, radius:0.26, tip:0.46, glow:0.95, spin:0.34, seed:21,
         scale:1, pop:1.92 },
   frame: { show:true, color:"#ffffff", width:5, glow:0.9, boxW:557, boxH:552, gap:23, x:359, y:121, dots:true, dotR:8, dim:0.42 },
@@ -299,6 +297,9 @@ const DEFAULTS = {
              hub:true, hubX:430, hubY:484, hubSize:640, fanBow:180 },
   bg: { base:"#0b0b0d", glow:"#8e8e93", brightness:1, vignette:0.75, particles:90, pSize:1,
         pSpeed:1, pColor:"#e7dccb", stars:true, grain:0.055, bloom:0.38 },
+  /* the opening stone ignites and whites out the frame; the scene emerges
+     brighter and larger on the far side, so the flash covers a scale jump */
+  flash: { show:true, at:0.75, rise:0.09, fall:0.11, burst:0.20, color:"#ffffff" },
   motion: { speed:1, loop:true, bars:true, aspect:2.0, drift:1, camera:1, itemDur:2.90 }
 };
 const CFG = structuredClone(DEFAULTS);
@@ -410,12 +411,13 @@ function cardLayout(i,s){
 
 /* intro crystal, authored directly in screen space (it flies past the lens) */
 const CA_POS = track([
-  [0.20, 1780,-140, 150, 0.0],
-  [0.38, 1600,  70, 330, 1.0],
-  [0.65, 1150, 340, 740, 1.0],
-  [0.90,  640, 490, 940, 1.0],
-  [1.17,  350, 560, 690, 1.0],
-  [1.40,  230, 640, 520, 1.0],
+  [0.20, 1520,-120, 260, 0.0],
+  [0.34, 1330,  90, 420, 1.0],
+  [0.58, 1010, 300, 540, 1.0],
+  [0.70,  910, 395, 600, 1.0],   // last frame before the flash takes the screen
+  [0.82,  670, 470, 900, 1.0],   // emerges bigger — the flash hid the jump
+  [1.10,  545, 525, 960, 1.0],
+  [1.40,  400, 615, 800, 1.0],
   [1.83,  250, 790, 345, 1.0],
   [2.20,  140, 930, 230, 0.55],
   [2.60,   60,1060, 150, 0.0]
@@ -754,7 +756,9 @@ function glowDot(x,y,r,color,glow,alpha){
 function paintBackground(t,cam){
   const bg=CFG.bg;
   const base=hex2rgb(bg.base);
-  const ramp=smooth(clamp(t/1.25,0,1))*0.86+0.14;
+  const F=CFG.flash;
+  const ramp=F.show?lerp(0.30,1,smooth(clamp((t-(F.at-0.11))/0.24,0,1)))
+                   :smooth(clamp(t/1.25,0,1))*0.86+0.14;
   const b=bg.brightness*ramp;
 
   setRaw();
@@ -1120,8 +1124,10 @@ function render(t,wall){
       ry:t*A.spin*2.1,
       rz:caRot[0],
       top:A.top, bottom:A.bottom, edge:A.edge,
-      alpha:caPos[3]*fade, glow:A.glow
+      alpha:caPos[3]*fade,
+      glow:A.glow*(CFG.flash.show?lerp(0.30,1,smooth(clamp((t-(CFG.flash.at-0.10))/0.22,0,1))):1)
     });
+    paintBurst(t,caPos[0],caPos[1],caPos[2],fade);
   }
 
   /* ── post ── */
@@ -1129,6 +1135,7 @@ function render(t,wall){
   if(strength>0.01)applyBloom(strength);
   paintVignette();
   if(CFG.bg.grain>0.002&&autoQuality>0.6)paintGrain(wall);
+  paintFlash(t);
 
   paintText(t,cam,fade,s);
 }
@@ -1152,6 +1159,47 @@ function applyBloom(strength){
   ctx.globalCompositeOperation='source-over';
   ctx.globalAlpha=1;
 }
+/* 0 → 1 → 0 across the ignition. Fast in, slower out, like a real bloom. */
+function flashLevel(t){
+  const F=CFG.flash;
+  if(!F.show)return 0;
+  if(t<F.at) return Math.pow(clamp(1-(F.at-t)/Math.max(.01,F.rise),0,1),2.2);
+  return Math.pow(clamp(1-(t-F.at)/Math.max(.01,F.fall),0,1),1.5);
+}
+/* The stone lights up from within just before it takes the screen. */
+function paintBurst(t,x,y,size,alpha){
+  const F=CFG.flash;
+  if(!F.show||F.burst<=0)return;
+  const p=clamp(1-(F.at-t)/Math.max(.01,F.burst),0,1);
+  if(p<=0||t>F.at)return;
+  const c=hex2rgb(CFG.ca.bottom), e=Math.pow(p,2.0);
+  const r=size*(0.55+e*2.6);
+  const g=ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,rgba([255,255,255],0.95*e*alpha));
+  g.addColorStop(0.18,rgba(scalec(c,1.6),0.75*e*alpha));
+  g.addColorStop(0.5,rgba(c,0.28*e*alpha));
+  g.addColorStop(1,rgba(c,0));
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.restore();
+}
+function paintFlash(t){
+  const v=flashLevel(t);
+  if(v<=0.002)return;
+  setRaw();
+  const c=hex2rgb(CFG.flash.color);
+  const vv=clamp(v,0,1);
+  ctx.globalAlpha=vv*0.60;
+  ctx.fillStyle=rgba(c,1);
+  ctx.fillRect(0,0,W,H);
+  /* centred on where the stone was, so the corners stay a touch darker */
+  const cx=W*0.52, cy=H*0.5, r=Math.hypot(W,H)*0.78;
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  g.addColorStop(0,rgba(c,vv*0.86));
+  g.addColorStop(0.55,rgba(c,vv*0.58));
+  g.addColorStop(1,rgba(c,0));
+  ctx.globalAlpha=1;ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+
 function paintVignette(){
   const v=CFG.bg.vignette;if(v<=0.005)return;
   setRaw();
@@ -1222,7 +1270,13 @@ const SCHEMA=[
    {k:"ca.tip",l:"Point length",t:"rng",min:.02,max:1.2,step:.02,mesh:"a"},
    {k:"ca.seed",l:"Shape seed",t:"rng",min:1,max:200,step:1,mesh:"a"},
    {k:"ca.glow",l:"Glow",t:"rng",min:0,max:2,step:.05},
-   {k:"ca.spin",l:"Tumble",t:"rng",min:-2,max:2,step:.02}
+   {k:"ca.spin",l:"Tumble",t:"rng",min:-2,max:2,step:.02},
+   {k:"flash.show",l:"Ignition flash",t:"bool"},
+   {k:"flash.at",l:"Flash at",t:"rng",min:0.1,max:4,step:.01,suf:"s"},
+   {k:"flash.rise",l:"Flash in",t:"rng",min:.02,max:.6,step:.01,suf:"s"},
+   {k:"flash.fall",l:"Flash out",t:"rng",min:.02,max:.8,step:.01,suf:"s"},
+   {k:"flash.burst",l:"Ignition",t:"rng",min:0,max:.8,step:.01,suf:"s"},
+   {k:"flash.color",l:"Flash colour",t:"col"}
  ]},
  {title:"Cards & path",items:[
    {k:"frame.show",l:"Show frame",t:"bool"},
